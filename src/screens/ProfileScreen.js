@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -122,7 +122,14 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Settings</Text>
                     
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(
+                            'Notifications',
+                            'Push notifications help you stay updated with:\n\n• New messages from buyers/sellers\n• Price drops on favorited items\n• Product inquiries\n\nManage notification preferences in your device settings.',
+                            [{ text: 'OK' }]
+                        )}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="notifications-outline" size={22} color="#4A90E2" />
                         </View>
@@ -130,7 +137,14 @@ export default function ProfileScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(
+                            'Privacy & Security',
+                            'Your privacy matters:\n\n• Your contact info is only visible to interested buyers\n• Messages are private and secure\n• You control what information to share\n• Report suspicious activity anytime\n\nWe never share your data with third parties.',
+                            [{ text: 'Got it' }]
+                        )}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="shield-checkmark-outline" size={22} color="#4A90E2" />
                         </View>
@@ -138,7 +152,14 @@ export default function ProfileScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(
+                            'Help & Support',
+                            'Need assistance?\n\n📧 Email: support@unimart.com\n📱 WhatsApp: +94 77 123 4567\n⏰ Available: Mon-Fri, 9AM-6PM\n\nCommon issues:\n• Can\'t upload images? Check storage permissions\n• Messages not sending? Check internet connection\n• Product not showing? Refresh the app',
+                            [{ text: 'Close' }]
+                        )}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="help-circle-outline" size={22} color="#4A90E2" />
                         </View>
@@ -151,7 +172,14 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
                     
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(
+                            'About UniMart',
+                            'UniMart - University Marketplace\n\nYour trusted platform for buying and selling within the university community.\n\n✨ Features:\n• Buy & sell products easily\n• Direct messaging with sellers\n• Secure transactions\n• Community-focused\n\n🎓 Made for students, by students\n\nVersion 1.0.0\n© 2026 UniMart. All rights reserved.',
+                            [{ text: 'Close' }]
+                        )}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="information-circle-outline" size={22} color="#4A90E2" />
                         </View>
@@ -159,7 +187,14 @@ export default function ProfileScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(
+                            'Terms & Conditions',
+                            'UniMart Terms of Use\n\nBy using UniMart, you agree to:\n\n1. Listing Accuracy\n• Provide accurate product information\n• Use real photos of your items\n• Set fair prices\n\n2. Communication\n• Be respectful to all users\n• Respond to inquiries promptly\n• No spam or harassment\n\n3. Transactions\n• Meet in safe, public places\n• Inspect items before purchase\n• Report suspicious activity\n\n4. Prohibited Items\n• No illegal items\n• No counterfeit goods\n• No dangerous materials\n\nViolations may result in account suspension.',
+                            [{ text: 'I Understand' }]
+                        )}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="document-text-outline" size={22} color="#4A90E2" />
                         </View>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TextInput, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,14 +82,27 @@ export default function HomeScreen({ navigation }) {
 
     useEffect(() => {
         loadFavorites();
-        const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+        // Remove orderBy to avoid index requirement - sort in memory instead
+        const q = query(collection(db, 'products'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const productsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
+            
+            // Sort in memory by createdAt (newest first)
+            productsData.sort((a, b) => {
+                const timeA = a.createdAt?.seconds || 0;
+                const timeB = b.createdAt?.seconds || 0;
+                return timeB - timeA; // Descending order (newest first)
+            });
+            
             setProducts(productsData);
             setFilteredProducts(productsData);
+            setLoading(false);
+            setRefreshing(false);
+        }, (error) => {
+            console.error('Error loading products:', error);
             setLoading(false);
             setRefreshing(false);
         });
@@ -153,6 +166,14 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate('ProductDetails', { product: item })}
             activeOpacity={0.8}
         >
+            {/* Owner Badge */}
+            {item.userId === auth.currentUser?.uid && (
+                <View style={styles.ownerBadge}>
+                    <Ionicons name="person" size={12} color="#fff" />
+                    <Text style={styles.ownerBadgeText}>Your Product</Text>
+                </View>
+            )}
+            
             <ImageCarousel images={item.images} />
             <TouchableOpacity 
                 style={styles.favoriteButton}
@@ -164,7 +185,10 @@ export default function HomeScreen({ navigation }) {
                     color={favorites.includes(item.id) ? "#ff3b30" : "#fff"} 
                 />
             </TouchableOpacity>
-            <View style={styles.cardContent}>
+            <View style={[
+                styles.cardContent,
+                item.userId === auth.currentUser?.uid && styles.ownProductContent
+            ]}>
                 <View style={styles.row}>
                     <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
                     <View style={styles.priceTag}>
@@ -201,9 +225,14 @@ export default function HomeScreen({ navigation }) {
                 style={styles.header}
             >
                 <View style={styles.headerTop}>
-                    <View>
-                        <Text style={styles.headerGreeting}>Discover</Text>
-                        <Text style={styles.headerTitle}>UniMart</Text>
+                    <View style={styles.brandContainer}>
+                        <View style={styles.logoContainer}>
+                            <Ionicons name="school" size={28} color="#fff" />
+                        </View>
+                        <View>
+                            <Text style={styles.headerGreeting}>Discover</Text>
+                            <Text style={styles.headerTitle}>UniMart</Text>
+                        </View>
                     </View>
                     <TouchableOpacity 
                         style={styles.searchIconButton}
@@ -315,16 +344,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 3
     },
+    brandContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12
+    },
+    logoContainer: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.4)',
+    },
     headerGreeting: {
-        fontSize: 11,
+        fontSize: 12,
         color: 'rgba(255,255,255,0.85)',
         fontWeight: '500',
-        marginBottom: 1
+        marginBottom: 2
     },
     headerTitle: { 
-        fontSize: 16, 
+        fontSize: 22, 
         fontWeight: 'bold', 
-        color: '#fff'
+        color: '#fff',
+        letterSpacing: 0.5
     },
     searchIconButton: {
         width: 40,
@@ -366,6 +411,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 4,
+        position: 'relative',
+    },
+    ownerBadge: {
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#4A90E2',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 20,
+        zIndex: 10,
+        gap: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    ownerBadgeText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    ownProductContent: {
+        backgroundColor: '#f0f7ff',
     },
     carouselContainer: { 
         height: 220, 

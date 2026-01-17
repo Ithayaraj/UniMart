@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-export default function AddProductScreen() {
+export default function AddProductScreen({ navigation }) {
     const [name, setName] = useState('');
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
@@ -188,6 +188,9 @@ export default function AddProductScreen() {
             setDescription('');
             setContact('');
             setImages([]);
+
+            // Navigate to Home screen to see the new product
+            navigation.navigate('Home');
 
         } catch (error) {
             console.error('Add product error:', error);
