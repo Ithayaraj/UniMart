@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Image, ActivityIndicator, Alert, Platform, KeyboardAvoidingView, Modal, Dimensions, SafeAreaView, StatusBar } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, Image, ActivityIndicator, Alert, Platform, KeyboardAvoidingView, Modal, Dimensions, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useToast } from '../context/ToastContext';
 import * as ImagePicker from 'expo-image-picker';
 import { db, storage, auth } from '../firebaseConfig';

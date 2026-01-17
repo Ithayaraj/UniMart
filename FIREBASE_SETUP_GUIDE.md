@@ -1,8 +1,8 @@
-# Firebase Setup Guide - Fix Product Upload Errors
+# Firebase Setup Guide - Fix Upload Errors
 
 ## Most Common Issue: Firebase Storage Rules
 
-If you're getting permission errors when adding products, you need to update your Firebase Storage rules.
+If you're getting permission errors when uploading images (products or profile pictures), you need to update your Firebase Storage rules.
 
 ### Steps to Fix:
 
@@ -16,13 +16,19 @@ If you're getting permission errors when adding products, you need to update you
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Product images - users can upload to their own folder
     match /products/{userId}/{allPaths=**} {
-      // Allow authenticated users to upload their own products
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Fallback for any other paths (optional)
+    // Profile images - users can upload their own profile picture
+    match /profiles/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Fallback for any other paths
     match /{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
@@ -32,6 +38,8 @@ service firebase.storage {
 ```
 
 6. Click **Publish**
+
+**IMPORTANT:** After publishing, wait 1-2 minutes for the rules to propagate, then try uploading again.
 
 ## Firestore Rules (if needed)
 

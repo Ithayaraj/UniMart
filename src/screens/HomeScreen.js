@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TextInput, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TextInput, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { db, auth } from '../firebaseConfig';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -76,8 +78,10 @@ export default function HomeScreen({ navigation }) {
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchVisible, setSearchVisible] = useState(false);
+    const [favorites, setFavorites] = useState([]);
 
     useEffect(() => {
+        loadFavorites();
         const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const productsData = snapshot.docs.map(doc => ({
@@ -92,6 +96,38 @@ export default function HomeScreen({ navigation }) {
 
         return () => unsubscribe();
     }, []);
+
+    const loadFavorites = async () => {
+        try {
+            const userId = auth.currentUser?.uid;
+            const favKey = `favorites_${userId}`;
+            const favIds = await AsyncStorage.getItem(favKey);
+            if (favIds) {
+                setFavorites(JSON.parse(favIds));
+            }
+        } catch (error) {
+            console.error('Error loading favorites:', error);
+        }
+    };
+
+    const toggleFavorite = async (productId) => {
+        try {
+            const userId = auth.currentUser?.uid;
+            const favKey = `favorites_${userId}`;
+            let newFavorites;
+            
+            if (favorites.includes(productId)) {
+                newFavorites = favorites.filter(id => id !== productId);
+            } else {
+                newFavorites = [...favorites, productId];
+            }
+            
+            await AsyncStorage.setItem(favKey, JSON.stringify(newFavorites));
+            setFavorites(newFavorites);
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    };
 
     useEffect(() => {
         if (searchQuery.trim() === '') {
@@ -118,6 +154,16 @@ export default function HomeScreen({ navigation }) {
             activeOpacity={0.8}
         >
             <ImageCarousel images={item.images} />
+            <TouchableOpacity 
+                style={styles.favoriteButton}
+                onPress={() => toggleFavorite(item.id)}
+            >
+                <Ionicons 
+                    name={favorites.includes(item.id) ? "heart" : "heart-outline"} 
+                    size={24} 
+                    color={favorites.includes(item.id) ? "#ff3b30" : "#fff"} 
+                />
+            </TouchableOpacity>
             <View style={styles.cardContent}>
                 <View style={styles.row}>
                     <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
@@ -325,6 +371,18 @@ const styles = StyleSheet.create({
         height: 220, 
         width: '100%', 
         backgroundColor: '#f0f0f0' 
+    },
+    favoriteButton: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10
     },
     cardImage: { 
         width: width - 30, 

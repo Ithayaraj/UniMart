@@ -12,9 +12,13 @@ import SignupScreen from '../screens/SignupScreen';
 import HomeScreen from '../screens/HomeScreen';
 import AddProductScreen from '../screens/AddProductScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-
 import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 import EditProductScreen from '../screens/EditProductScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import MyProductsScreen from '../screens/MyProductsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import MessagesScreen from '../screens/MessagesScreen';
+import ChatScreen from '../screens/ChatScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -29,6 +33,8 @@ function MainTabs() {
 
                     if (route.name === 'Home') {
                         iconName = focused ? 'home' : 'home-outline';
+                    } else if (route.name === 'Messages') {
+                        iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                     } else if (route.name === 'Add Product') {
                         iconName = focused ? 'add-circle' : 'add-circle-outline';
                     } else if (route.name === 'Profile') {
@@ -66,6 +72,13 @@ function MainTabs() {
                 component={HomeScreen}
                 options={{
                     tabBarLabel: 'Home',
+                }}
+            />
+            <Tab.Screen 
+                name="Messages" 
+                component={MessagesScreen}
+                options={{
+                    tabBarLabel: 'Messages',
                 }}
             />
             <Tab.Screen 
@@ -123,6 +136,10 @@ export default function AppNavigator() {
                         <Stack.Screen name="Main" component={MainTabs} />
                         <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
                         <Stack.Screen name="EditProduct" component={EditProductScreen} />
+                        <Stack.Screen name="Favorites" component={FavoritesScreen} />
+                        <Stack.Screen name="MyProducts" component={MyProductsScreen} />
+                        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="Chat" component={ChatScreen} />
                     </>
                 ) : (
                     <Stack.Screen name="Auth" component={AuthStack} />

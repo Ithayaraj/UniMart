@@ -1,9 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Alert, Modal, Linking, Platform, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Alert, Modal, Linking, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { db, auth } from '../firebaseConfig';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '../context/ToastContext';
 
 const { width, height } = Dimensions.get('window');
@@ -13,8 +14,24 @@ export default function ProductDetailsScreen({ route, navigation }) {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [fullImageVisible, setFullImageVisible] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+    const [messageLoading, setMessageLoading] = useState(false);
     const { showToast } = useToast();
-    const isOwner = auth.currentUser?.uid === product.userId;
+    const currentUserId = auth.currentUser?.uid;
+    const isOwner = currentUserId === product?.userId;
+
+    // Safety check
+    if (!product) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.centered}>
+                    <Text>Product not found</Text>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Text style={{ color: '#4A90E2', marginTop: 10 }}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     const handleScroll = (event) => {
         const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -78,6 +95,80 @@ export default function ProductDetailsScreen({ route, navigation }) {
                 console.error('Error opening dialer:', err);
                 showToast('Error opening dialer', 'error');
             });
+    };
+
+    const handleMessage = async () => {
+        if (messageLoading) return;
+        
+        setMessageLoading(true);
+        try {
+            const currentUserId = auth.currentUser?.uid;
+            const sellerId = product.userId;
+            
+            if (!sellerId) {
+                showToast('Seller information not available', 'error');
+                setMessageLoading(false);
+                return;
+            }
+            
+            // Create conversation ID based on PRODUCT + users (so each product has separate chat)
+            const conversationId = `${product.id}_${[currentUserId, sellerId].sort().join('_')}`;
+            
+            // Get seller info
+            const sellerDoc = await getDoc(doc(db, 'users', sellerId));
+            const sellerName = sellerDoc.exists() ? (sellerDoc.data().name || 'Seller') : 'Seller';
+            const sellerImage = sellerDoc.exists() ? sellerDoc.data().profileImage : null;
+            
+            // Get current user info
+            const currentUserDoc = await getDoc(doc(db, 'users', currentUserId));
+            const currentUserName = currentUserDoc.exists() ? (currentUserDoc.data().name || 'User') : 'User';
+            const currentUserImage = currentUserDoc.exists() ? currentUserDoc.data().profileImage : null;
+            
+            // Build conversation data - only include fields with values
+            const conversationData = {
+                participants: [currentUserId, sellerId],
+                participantNames: {
+                    [currentUserId]: currentUserName,
+                    [sellerId]: sellerName
+                },
+                productId: product.id,
+                productName: product.name,
+                lastMessage: '',
+                lastMessageTime: new Date(),
+                unreadCount: {
+                    [currentUserId]: 0,
+                    [sellerId]: 0
+                }
+            };
+
+            // Only add participantImages if at least one exists
+            const participantImages = {};
+            if (currentUserImage) participantImages[currentUserId] = currentUserImage;
+            if (sellerImage) participantImages[sellerId] = sellerImage;
+            
+            if (Object.keys(participantImages).length > 0) {
+                conversationData.participantImages = participantImages;
+            }
+            
+            // Create or update conversation
+            const convRef = doc(db, 'conversations', conversationId);
+            await setDoc(convRef, conversationData, { merge: true });
+            
+            setMessageLoading(false);
+            
+            // Navigate to chat
+            navigation.navigate('Chat', {
+                conversationId,
+                otherUserId: sellerId,
+                otherUserName: sellerName,
+                productId: product.id,
+                productName: product.name
+            });
+        } catch (error) {
+            console.error('Error starting conversation:', error);
+            showToast('Failed to start conversation', 'error');
+            setMessageLoading(false);
+        }
     };
 
     return (
@@ -181,10 +272,26 @@ export default function ProductDetailsScreen({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity style={styles.actionButton} onPress={handleCallSeller}>
-                        <Ionicons name="call" size={20} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.actionButtonText}>Call Seller</Text>
-                    </TouchableOpacity>
+                    <View style={styles.buyerButtons}>
+                        <TouchableOpacity 
+                            style={[styles.actionButton, styles.messageButton, messageLoading && styles.buttonDisabled]} 
+                            onPress={handleMessage}
+                            disabled={messageLoading}
+                        >
+                            {messageLoading ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <>
+                                    <Ionicons name="chatbubble-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                                    <Text style={styles.actionButtonText}>Message</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.actionButton, styles.callButton]} onPress={handleCallSeller}>
+                            <Ionicons name="call" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.actionButtonText}>Call</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
@@ -227,6 +334,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8f9fa' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -321,6 +429,26 @@ const styles = StyleSheet.create({
         backgroundColor: '#d9534f', // Red for delete
         flexDirection: 'row',
         justifyContent: 'center',
+    },
+    buyerButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 10,
+    },
+    messageButton: {
+        flex: 1,
+        backgroundColor: '#4A90E2', // Blue for message
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    callButton: {
+        flex: 1,
+        backgroundColor: '#28a745', // Green for call
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    buttonDisabled: {
+        opacity: 0.6,
     },
     modalContainer: {
         flex: 1,

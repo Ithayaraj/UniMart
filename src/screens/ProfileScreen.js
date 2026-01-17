@@ -1,15 +1,39 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebaseConfig';
 import { useToast } from '../context/ToastContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation }) {
     const { showToast } = useToast();
+    const [profile, setProfile] = useState(null);
     const userEmail = auth.currentUser?.email || 'user@example.com';
-    const userName = userEmail.split('@')[0];
+
+    useEffect(() => {
+        loadProfile();
+        const unsubscribe = navigation.addListener('focus', () => {
+            loadProfile();
+        });
+        return unsubscribe;
+    }, [navigation]);
+
+    const loadProfile = async () => {
+        try {
+            const userId = auth.currentUser?.uid;
+            const docRef = doc(db, 'users', userId);
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                setProfile(docSnap.data());
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+        }
+    };
 
     const logout = async () => {
         try {
@@ -20,6 +44,9 @@ export default function ProfileScreen({ navigation }) {
         }
     };
 
+    const displayName = profile?.name || userEmail.split('@')[0];
+    const displayMobile = profile?.mobile || 'Not set';
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" translucent={false} />
@@ -28,12 +55,35 @@ export default function ProfileScreen({ navigation }) {
                 colors={['#4A90E2', '#5BA3F5']} 
                 style={styles.header}
             >
+                <TouchableOpacity 
+                    style={styles.editButton}
+                    onPress={() => navigation.navigate('EditProfile')}
+                >
+                    <Ionicons name="create-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+
                 <View style={styles.profileHeader}>
-                    <View style={styles.avatarContainer}>
-                        <Ionicons name="person" size={40} color="#fff" />
-                    </View>
-                    <Text style={styles.userName}>{userName}</Text>
+                    <TouchableOpacity 
+                        style={styles.avatarContainer}
+                        onPress={() => navigation.navigate('EditProfile')}
+                    >
+                        {profile?.profileImage ? (
+                            <Image 
+                                source={{ uri: profile.profileImage }} 
+                                style={styles.avatarImage}
+                            />
+                        ) : (
+                            <Ionicons name="person" size={40} color="#fff" />
+                        )}
+                    </TouchableOpacity>
+                    <Text style={styles.userName}>{displayName}</Text>
                     <Text style={styles.userEmail}>{userEmail}</Text>
+                    {profile?.mobile && (
+                        <View style={styles.mobileContainer}>
+                            <Ionicons name="call" size={14} color="rgba(255,255,255,0.9)" />
+                            <Text style={styles.userMobile}>{displayMobile}</Text>
+                        </View>
+                    )}
                 </View>
             </LinearGradient>
 
@@ -45,15 +95,10 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account</Text>
                     
-                    <TouchableOpacity style={styles.menuItem}>
-                        <View style={styles.menuIconContainer}>
-                            <Ionicons name="person-outline" size={22} color="#4A90E2" />
-                        </View>
-                        <Text style={styles.menuText}>Edit Profile</Text>
-                        <Ionicons name="chevron-forward" size={20} color="#ccc" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('MyProducts')}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="bag-handle-outline" size={22} color="#4A90E2" />
                         </View>
@@ -61,7 +106,10 @@ export default function ProfileScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={20} color="#ccc" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity 
+                        style={styles.menuItem}
+                        onPress={() => navigation.navigate('Favorites')}
+                    >
                         <View style={styles.menuIconContainer}>
                             <Ionicons name="heart-outline" size={22} color="#4A90E2" />
                         </View>
@@ -150,6 +198,18 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 8,
     },
+    editButton: {
+        position: 'absolute',
+        top: 25,
+        right: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10
+    },
     profileHeader: {
         alignItems: 'center',
     },
@@ -163,6 +223,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         borderWidth: 3,
         borderColor: 'rgba(255,255,255,0.4)',
+        overflow: 'hidden'
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover'
     },
     userName: {
         fontSize: 22,
@@ -174,6 +240,18 @@ const styles = StyleSheet.create({
     userEmail: {
         fontSize: 14,
         color: 'rgba(255,255,255,0.85)',
+        marginBottom: 4
+    },
+    mobileContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 4
+    },
+    userMobile: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+        fontWeight: '500'
     },
     scrollContent: {
         padding: 20,
